@@ -352,11 +352,6 @@ SET(APR_TEST_SOURCES
   test/testvsn.c
 )
 
-IF(DEFINED APR_VER)
-  set(ver _${APR_VER})
-  set(verDir /apr${ver})
-ENDIF()
-
 SET(install_targets)
 SET(install_bin_pdb)
 
@@ -376,10 +371,7 @@ endif()
 
 ADD_LIBRARY(apr-1 STATIC ${APR_SOURCES} ${APR_PUBLIC_HEADERS_GENERATED})
 SET(install_targets ${install_targets} apr-1)
-TARGET_INCLUDE_DIRECTORIES(apr-1 PUBLIC
-  $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include${verDir}> #include <apr/apr_version.h>
-  $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/include${verDir}/apr> #include <apr_version.h>
-  )
+TARGET_INCLUDE_DIRECTORIES(apr-1 PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 TARGET_LINK_LIBRARIES(apr-1 ${APR_SYSTEM_LIBS})
 if(WIN32)
 TARGET_COMPILE_DEFINITIONS(apr-1 PUBLIC $<INSTALL_INTERFACE:APR_DECLARE_STATIC>)
@@ -387,7 +379,6 @@ SET_TARGET_PROPERTIES(apr-1 PROPERTIES COMPILE_DEFINITIONS "APR_DECLARE_STATIC;W
 elseif(UNIX)
 SET_TARGET_PROPERTIES(apr-1 PROPERTIES COMPILE_DEFINITIONS "APR_DECLARE_STATIC")
 endif()
-SET_TARGET_PROPERTIES(apr-1 PROPERTIES OUTPUT_NAME apr-1${ver})
 ADD_DEPENDENCIES(apr-1 test_char_header)
 
 if(WIN32)
@@ -401,7 +392,6 @@ endif()
 ADD_LIBRARY(aprapp-1 STATIC misc/win32/apr_app.c misc/win32/internal.c ${APR_PUBLIC_HEADERS_GENERATED})
 SET(install_targets ${install_targets} aprapp-1)
 SET_TARGET_PROPERTIES(aprapp-1 PROPERTIES COMPILE_DEFINITIONS "APR_DECLARE_STATIC;APR_APP;WINNT")
-SET_TARGET_PROPERTIES(aprapp-1 PROPERTIES OUTPUT_NAME aprapp-1${ver})
 endif(WIN32)
 
 IF(APR_BUILD_TESTAPR)
@@ -519,25 +509,26 @@ ENDIF (APR_BUILD_TESTAPR)
 
 # Installation
 
-SET(targetsFile apr${ver}-targets)
+INCLUDE(GNUInstallDirs)
+
+SET(targetsFile apr-targets)
 INSTALL(TARGETS ${install_targets} EXPORT ${targetsFile}
-        RUNTIME DESTINATION bin
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
        )
 IF(DEFINED XP_NAMESPACE)
   SET(nameSpace NAMESPACE ${XP_NAMESPACE}::)
 ENDIF()
-INSTALL(EXPORT ${targetsFile} DESTINATION lib/cmake ${nameSpace})
+INSTALL(EXPORT ${targetsFile} DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake ${nameSpace})
 
 IF(INSTALL_PDB)
   INSTALL(FILES ${install_bin_pdb}
-          DESTINATION bin
+          DESTINATION ${CMAKE_INSTALL_BINDIR}
           CONFIGURATIONS RelWithDebInfo Debug)
 ENDIF()
 
-SET(includeDir include${verDir}/apr)
-INSTALL(FILES ${APR_PUBLIC_HEADERS_STATIC} ${APR_PUBLIC_HEADERS_GENERATED} DESTINATION ${includeDir})
+INSTALL(FILES ${APR_PUBLIC_HEADERS_STATIC} ${APR_PUBLIC_HEADERS_GENERATED} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 IF(APR_INSTALL_PRIVATE_H)
   # Kludges for unexpected dependencies of httpd 2.x, not installed by default
   SET(APR_PRIVATE_H_FOR_HTTPD
@@ -546,8 +537,8 @@ IF(APR_INSTALL_PRIVATE_H)
     include/arch/win32/apr_arch_utf8.h
     include/arch/win32/apr_private.h
     )
-  INSTALL(FILES ${APR_PRIVATE_H_FOR_HTTPD} DESTINATION ${includeDir}/arch/win32)
-  INSTALL(FILES include/arch/apr_private_common.h DESTINATION ${includeDir}/arch)
+  INSTALL(FILES ${APR_PRIVATE_H_FOR_HTTPD} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/arch/win32)
+  INSTALL(FILES include/arch/apr_private_common.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/arch)
 ENDIF()
 
 STRING(TOUPPER "${CMAKE_BUILD_TYPE}" buildtype)
