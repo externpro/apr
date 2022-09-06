@@ -15,9 +15,8 @@
 #
 # Read README.cmake before using this.
 
-PROJECT(APR C)
-
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8...3.21)
+PROJECT(APR C)
 
 INCLUDE(flags OPTIONAL)
 OPTION(APR_INSTALL_PRIVATE_H  "Install selected private .h files (for httpd)"  OFF)
