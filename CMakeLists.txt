@@ -15,10 +15,10 @@
 #
 # Read README.cmake before using this.
 
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8...3.21)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8...3.31)
 PROJECT(APR C)
 
-INCLUDE(flags OPTIONAL)
+INCLUDE(xpflags)
 OPTION(APR_INSTALL_PRIVATE_H  "Install selected private .h files (for httpd)"  OFF)
 OPTION(APR_HAVE_IPV6        "IPv6 support"                 ON)
 OPTION(INSTALL_PDB          "Install .pdb files (if generated)"  ON)
