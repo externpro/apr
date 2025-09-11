@@ -18,7 +18,7 @@ xpcfgCheckIncludeFile(fcntl.h HAVE_FCNTL_H)
 xpcfgCheckIncludeFile(grp.h HAVE_GRP_H)
 xpcfgCheckIncludeFile(inttypes.h HAVE_INTTYPES_H)
 xpcfgCheckIncludeFile(io.h HAVE_IO_H)
-xpcfgCheckIncludeFile(kernel/OS.h HAVE_KERNEL_OS_H)
+xpcfgCheckIncludeFile(kernel/OS.h HAVE_KERNEL_OS_H) # BeOS
 xpcfgCheckIncludeFile(langinfo.h HAVE_LANGINFO_H)
 xpcfgCheckIncludeFile(limits.h HAVE_LIMITS_H)
 xpcfgCheckIncludeFile(linux/random.h HAVE_LINUX_RANDOM_H)
@@ -190,8 +190,8 @@ xpcfgCheckSymFnExists(shmat HAVE_SHMAT)
 xpcfgCheckSymFnExists(shmctl HAVE_SHMCTL)
 xpcfgCheckSymFnExists(shmdt HAVE_SHMDT)
 xpcfgCheckSymFnExists(shmget HAVE_SHMGET)
-xpcfgCheckSymFnExists(shm_open HAVE_SHM_OPEN) # TODO: configure diff
-xpcfgCheckSymFnExists(shm_unlink HAVE_SHM_UNLINK) # TODO: configure diff
+xpcfgCheckSymFnExists(shm_open HAVE_SHM_OPEN)
+xpcfgCheckSymFnExists(shm_unlink HAVE_SHM_UNLINK)
 xpcfgCheckSymFnExists(sigaction HAVE_SIGACTION)
 xpcfgCheckSymFnExists(sigsuspend HAVE_SIGSUSPEND)
 xpcfgCheckSymFnExists(sigwait HAVE_SIGWAIT)
@@ -214,7 +214,10 @@ cmake_pop_check_state()
 xpcfgCheckSymExistsInHdr(BONE_VERSION sys/socket.h HAVE_BONE_VERSION)
 xpcfgCheckSymExistsInHdr(F_SETLK fcntl.h HAVE_F_SETLK)
 xpcfgCheckSymExistsInHdr(LOCK_EX sys/file.h HAVE_LOCK_EX)
-xpcfgCheckSymExistsInHdr(MAP_ANON sys/mman.h HAVE_MAP_ANON)
+xpcfgCheckSymExistsInHdr(MAP_ANON sys/mman.h HAVE_MAP_ANON) # non-POSIX
+if(NOT HAVE_MAP_ANON)
+  xpcfgCheckSymExistsInHdr(MAP_ANONYMOUS sys/mman.h HAVE_MAP_ANON) # POSIX
+endif()
 xpcfgCheckSymExistsInHdr(POLLIN poll.h HAVE_POLLIN)
 if(NOT HAVE_POLLIN)
   xpcfgCheckSymExistsInHdr(POLLIN sys/poll.h HAVE_POLLIN)
@@ -254,13 +257,10 @@ cmake_pop_check_state()
 set(AC_APPLE_UNIVERSAL_BUILD 0) # not used
 set(APR_ALLOCATOR_GUARD_PAGES 0) #TODO: determine
 set(APR_ALLOCATOR_USES_MMAP 0) #TODO: determine
-set(APR_INT64_STRFN strtol) #TODO: determine
-set(APR_OFF_T_STRFN strtol) #TODO: determine
+# Determine string conversion functions for 64-bit integers and off_t
+xpcfgStrfn(APR_INT64_STRFN APR_OFF_T_STRFN)
 set(APR_POOL_CONCURRENCY_CHECK 0) #TODO: determine
 set(C_ALLOCA 0) # not used
-if(EXISTS /dev/urandom) # path of random device
-  set(DEV_RANDOM /dev/urandom)
-endif()
 set(DIRENT_INODE d_fileno) #TODO: determine
 set(DIRENT_TYPE d_type) #TODO: determine
 # DSO support TODO: determine
@@ -273,28 +273,53 @@ set(FCNTL_TRYACQUIRE_EACCES 0) #TODO: determine
 set(FLOCK_IS_GLOBAL 0) #TODO: determine
 set(GETHOSTBYADDR_IS_THREAD_SAFE 0) #TODO: determine
 set(GETHOSTBYNAME_IS_THREAD_SAFE 0) #TODO: determine
-set(GETHOSTBYNAME_R_GLIBC2 1) #TODO: determine
-set(GETHOSTBYNAME_R_HOSTENT_DATA 0) #TODO: determine
 set(GETSERVBYNAME_IS_THREAD_SAFE 0) #TODO: determine
-set(GETSERVBYNAME_R_GLIBC2 1) #TODO: determine
-set(GETSERVBYNAME_R_OSF1 0) #TODO: determine
-set(GETSERVBYNAME_R_SOLARIS 0) #TODO: determine
+xpcfgCheckGetNameStyle(
+  GETHOSTBYNAME_R_GLIBC2
+  GETHOSTBYNAME_R_HOSTENT_DATA
+  GETSERVBYNAME_R_GLIBC2
+  GETSERVBYNAME_R_OSF1
+  GETSERVBYNAME_R_SOLARIS
+  )
 set(HAVE_AIO_MSGQ 0) #TODO: determine
 set(HAVE_ATOMIC_BUILTINS 1) #TODO: determine
 set(HAVE_ATOMIC_BUILTINS64 1) #TODO: determine
-set(HAVE_DECL_SYS_GETRANDOM 1) #TODO: determine
-set(HAVE_DECL_SYS_SIGLIST 1) #TODO: determine
+########################################
+# determine system random number generation method
+foreach(dev_random /dev/arandom /dev/urandom /dev/random)
+  if(EXISTS ${dev_random} AND IS_READABLE ${dev_random})
+    set(DEV_RANDOM ${dev_random})
+    break()
+  endif()
+endforeach()
+set(DEFINE_HAVE_DECL_SYS_GETRANDOM cmakedefine01) # Define to 1 if you have the declaration of 'SYS_getrandom',
+xpcfgDeclSysGetrandom(HAVE_DECL_SYS_GETRANDOM)    #   and to 0 if you don't.
+if(HAVE_GETRANDOM)
+  set(SYS_RANDOM "\"getrandom\"")
+elseif(HAVE_SYS_RANDOM_H AND HAVE_DECL_SYS_GETRANDOM)
+  set(SYS_RANDOM "\"SYS_getrandom\"")
+elseif(HAVE_ARC4RANDOM_BUF)
+  set(SYS_RANDOM "\"arc4random\"")
+elseif(EXISTS ${DEV_RANDOM})
+  set(SYS_RANDOM ${DEV_RANDOM})
+else()
+  set(SYS_RANDOM "")
+endif()
+########################################
+set(DEFINE_HAVE_DECL_SYS_SIGLIST cmakedefine01) # Define to 1 if you have the declaration of 'sys_siglist',
+xpcfgCheckSysSiglist(HAVE_DECL_SYS_SIGLIST)     #   and to 0 if you don't.
 set(HAVE_EGD 0) #TODO: determine
-set(HAVE_EPOLL 1) #TODO: determine
-set(HAVE_EPOLL_WAIT_RELIABLE_TIMEOUT 1) #TODO: determine
+xpcfgCheckEpoll(HAVE_EPOLL HAVE_EPOLL_WAIT_RELIABLE_TIMEOUT)
 xpcfgGaiAddrconfig(HAVE_GAI_ADDRCONFIG) # Define if getaddrinfo accepts the AI_ADDRCONFIG flag
 xpcfgGetaddrinfo(HAVE_GETADDRINFO) # Define to 1 if getaddrinfo exists and works well enough
 set(HAVE_HSTRERROR 0) #TODO: determine
-set(HAVE_PTHREAD_MUTEX_RECURSIVE 1) #TODO: determine
-set(HAVE_PTHREAD_MUTEX_ROBUST 1) #TODO: determine
-set(HAVE_PTHREAD_MUTEX_ROBUST_NP 0) #TODO: determine
-set(HAVE_PTHREAD_RWLOCKS 1) #TODO: determine
-set(HAVE_SOCK_CLOEXEC 1) #TODO: determine
+xpcfgCheckPthreadFeatures(
+  HAVE_PTHREAD_MUTEX_RECURSIVE
+  HAVE_PTHREAD_MUTEX_ROBUST
+  HAVE_PTHREAD_MUTEX_ROBUST_NP
+  HAVE_PTHREAD_RWLOCKS
+  )
+xpcfgSockCloexec(HAVE_SOCK_CLOEXEC) # Define if the SOCK_CLOEXEC flag is supported
 ########################################
 if(HAVE_SYS_STAT_H)
   set(statHdr sys/stat.h)
@@ -320,14 +345,14 @@ endif()
 xpcfgCheckStructHasMember("struct tm" tm_gmtoff ${tmHdr} HAVE_STRUCT_TM_TM_GMTOFF)
 xpcfgCheckStructHasMember("struct tm" __tm_gmtoff ${tmHdr} HAVE_STRUCT_TM___TM_GMTOFF)
 ########################################
-set(HAVE_TCP_NODELAY_WITH_CORK 1) #TODO: determine
+xpcfgTcpNodelayWithCork(HAVE_TCP_NODELAY_WITH_CORK) # Define if TCP_NODELAY and TCP_CORK can be enabled at the same time
 set(HAVE_TRUERAND 0) #TODO: determine
 set(HAVE_VALGRIND 0) #TODO: determine
 set(HAVE_VLA 1) #TODO: determine
 set(HAVE_ZOS_PTHREADS 0) #TODO: determine
 set(HAVE__ATOMIC_BUILTINS 1) #TODO: determine
 set(HAVE__ATOMIC_BUILTINS64 1) #TODO: determine
-set(NEGATIVE_EAI 1) #TODO: determine
+xpcfgNegativeEai(NEGATIVE_EAI) # check if getaddrinfo returns negative error codes
 ########################################
 execute_process(COMMAND libtool --version
   OUTPUT_QUIET ERROR_QUIET RESULT_VARIABLE hasLibtool
@@ -360,7 +385,12 @@ set(PACKAGE_URL "\"http://apr.apache.org\"")
 # Define to the version of this package.
 set(PACKAGE_VERSION "\"${VERSION}\"")
 ########################################
-set(POSIXSEM_IS_GLOBAL 0) #TODO: determine
+# POSIX semaphores are assumed to affect threads in the same process by default
+# This matches the configure script's behavior where apr_posixsem_is_global is set to "yes" by default
+set(POSIXSEM_IS_GLOBAL 1)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  set(POSIXSEM_IS_GLOBAL 0) # match the configure script result on linux
+endif()
 set(PPC405_ERRATA 0) #TODO: determine
 set(PTHREAD_ATTR_GETDETACHSTATE_TAKES_ONE_ARG 0) #TODO: determine
 set(PTHREAD_GETSPECIFIC_TAKES_TWO_ARGS 0) #TODO: determine
@@ -369,28 +399,205 @@ set(SETPGRP_VOID 1) #TODO: determine
 set(SIGWAIT_TAKES_ONE_ARG 0) #TODO: determine
 set(STACK_DIRECTION 0) #TODO: determine
 set(STDC_HEADERS 1) #TODO: determine
-set(STRERROR_R_RC_INT 0) #TODO: determine
+xpcfgStrerrorRReturnType(STRERROR_R_RC_INT) # Check if strerror_r returns int (POSIX) or char* (GNU)
 set(SYSVSEM_IS_GLOBAL 0) #TODO: determine
-set(SYS_RANDOM 0) #TODO: determine
 set(USE_ATOMICS_GENERIC 0) #TODO: determine
 set(USE_ATOMICS_GENERIC64 0) #TODO: determine
-set(USE_BEOSSEM 0) #TODO: determine
-set(USE_FCNTL_SERIALIZE 0) #TODO: determine
-set(USE_FLOCK_SERIALIZE 0) #TODO: determine
-set(USE_POSIXSEM_SERIALIZE 0) #TODO: determine
-set(USE_PROC_PTHREAD_SERIALIZE 1) #TODO: determine
-set(USE_SHMEM_BEOS 0) #TODO: determine
-set(USE_SHMEM_BEOS_ANON 0) #TODO: determine
-set(USE_SHMEM_MMAP_ANON 1) #TODO: determine
-set(USE_SHMEM_MMAP_SHM 1) #TODO: determine
-set(USE_SHMEM_MMAP_TMP 0) #TODO: determine
-set(USE_SHMEM_MMAP_ZERO 0) #TODO: determine
-set(USE_SHMEM_OS2 0) #TODO: determine
-set(USE_SHMEM_OS2_ANON 0) #TODO: determine
-set(USE_SHMEM_SHMGET 0) #TODO: determine
-set(USE_SHMEM_SHMGET_ANON 0) #TODO: determine
-set(USE_SHMEM_WIN32 0) #TODO: determine
-set(USE_SHMEM_WIN32_ANON 0) #TODO: determine
+########################################
+# serialization
+# intialize all USE_* to 0
+set(USE_FLOCK_SERIALIZE 0)
+set(USE_FCNTL_SERIALIZE 0)
+set(USE_SYSVSEM_SERIALIZE 0)
+set(USE_POSIXSEM_SERIALIZE 0)
+set(USE_PROC_PTHREAD_SERIALIZE 0)
+set(USE_PTHREAD_SERIALIZE 0)
+set(USE_BEOSSEM 0)
+# check capabilities
+set(HAS_FLOCK_SER 0)
+if(HAVE_FLOCK AND HAVE_LOCK_EX)
+  set(HAS_FLOCK_SER 1)
+endif()
+set(HAS_FCNTL_SER 0)
+if(HAVE_FCNTL_H AND HAVE_F_SETLK)
+  set(HAS_FCNTL_SER 1)
+endif()
+set(HAS_SYSV_SER 0)
+xpcfgCheckSysVSemaphores(HAVE_SEM_UNDO_COMPILES)
+if(HAVE_SYS_SEM_H AND HAVE_SEMGET AND HAVE_SEMCTL AND HAVE_SEM_UNDO AND HAVE_SEM_UNDO_COMPILES)
+  set(HAS_SYSV_SER 1)
+endif()
+set(HAS_POSIX_SER 0)
+if(HAVE_SEMAPHORE_H AND HAVE_SEM_CLOSE AND HAVE_SEM_UNLINK AND HAVE_SEM_POST AND HAVE_SEM_WAIT)
+  set(HAS_POSIX_SER 1)
+endif()
+set(HAS_PROC_PTHREAD_SER 0)
+if(HAVE_PTHREAD_H AND HAVE_PTHREAD_PROCESS_SHARED AND HAVE_PTHREAD_MUTEXATTR_SETPSHARED AND EXISTS /dev/zero)
+  # Only enable on platforms where we know it works (matching configure script)
+  if(CMAKE_SYSTEM_NAME MATCHES "Linux" OR
+     CMAKE_SYSTEM_NAME MATCHES "SunOS" OR # Solaris
+     CMAKE_SYSTEM_NAME MATCHES "HP-UX" OR
+     CMAKE_SYSTEM_NAME MATCHES "AIX" OR
+     CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+    set(HAS_PROC_PTHREAD_SER 1)
+  endif()
+endif()
+set(HAS_BEOS_SER 0)
+if(HAVE_KERNEL_OS_H)
+  set(HAS_BEOS_SER 1)
+endif()
+# On Darwin (macOS), prefer SYSV semaphores over flock/fcntl if available
+if(APPLE AND HAS_SYSV_SER)
+  set(applePrefersSysV TRUE)
+endif()
+# set USE_* based on priority (highest to lowest)
+if(HAS_PROC_PTHREAD_SER)
+  set(USE_PROC_PTHREAD_SERIALIZE 1)
+  set(USE_PTHREAD_SERIALIZE 1) # This is set when using pthreads
+elseif(HAS_FLOCK_SER AND NOT applePrefersSysV)
+  set(USE_FLOCK_SERIALIZE 1)
+elseif(HAS_FCNTL_SER AND NOT applePrefersSysV)
+  set(USE_FCNTL_SERIALIZE 1)
+elseif(HAS_SYSV_SER)
+  set(USE_SYSVSEM_SERIALIZE 1)
+elseif(HAS_POSIX_SER)
+  set(USE_POSIXSEM_SERIALIZE 1)
+elseif(HAS_BEOS_SER)
+  set(USE_BEOSSEM 1)
+else()
+  message(FATAL_ERROR "No serialization method found")
+endif()
+########################################
+# shared memory
+# detect capabilities
+set(havewin32shm 0)
+if(HAVE_WINDOWS_H)
+  set(havewin32shm 1)
+endif()
+set(haveos2shm 0)
+if(HAVE_OS2_H)
+  set(haveos2shm 1)
+endif()
+# Check for BeOS/Haiku area API
+set(HAVE_BEOS_AREA 0)
+if(HAVE_KERNEL_OS_H AND HAVE_CREATE_AREA)
+  set(HAVE_BEOS_AREA 1)  # BeOS/Haiku specific shared memory
+endif()
+# check for System V shared memory
+set(haveShmHeaders 0)
+if(HAVE_SYS_IPC_H AND HAVE_SYS_SHM_H AND HAVE_SYS_FILE_H)
+  set(haveShmHeaders 1)
+endif()
+set(haveShmFuncs 0)
+if(HAVE_SHMGET AND HAVE_SHMAT AND HAVE_SHMDT AND HAVE_SHMCTL)
+  set(haveShmFuncs 1)
+endif()
+set(HAVE_SHM_GET 0)
+if(haveShmHeaders AND haveShmFuncs)
+  set(HAVE_SHM_GET 1)
+endif()
+set(HAVE_SHM_GETANON ${HAVE_SHM_GET})  # Same requirements as SHM_GET
+# check for mmap-based shared memory
+set(HAVE_MMAP_TMP 0)
+set(HAVE_MMAP_ANON 0)
+set(HAVE_MMAP_SHM 0)
+set(HAVE_MMAP_ZERO 0)
+if(HAVE_SYS_MMAN_H AND HAVE_MMAP AND HAVE_MUNMAP)
+  set(HAVE_MMAP_TMP 1)
+  # Check for anonymous memory mapping
+  if(HAVE_MAP_ANON)
+    set(HAVE_MMAP_ANON 1)
+  endif()
+  # Check for POSIX shared memory
+  if(HAVE_SHM_OPEN AND HAVE_SHM_UNLINK)
+    set(HAVE_MMAP_SHM 1)
+  endif()
+  # Check for /dev/zero
+  # On Darwin, /dev/zero is not suitable for shared memory
+  # because it's not guaranteed to be shared across fork()
+  if(NOT APPLE AND EXISTS /dev/zero)
+    set(HAVE_MMAP_ZERO 1)
+  endif()
+endif()
+# Initialize all USE_SHMEM variables to 0
+set(USE_SHMEM_WIN32 0)
+set(USE_SHMEM_WIN32_ANON 0)
+set(USE_SHMEM_OS2 0)
+set(USE_SHMEM_OS2_ANON 0)
+set(USE_SHMEM_BEOS 0)
+set(USE_SHMEM_BEOS_ANON 0)
+set(USE_SHMEM_MMAP_ANON 0)
+set(USE_SHMEM_MMAP_SHM 0)
+set(USE_SHMEM_MMAP_ZERO 0)
+set(USE_SHMEM_SHMGET_ANON 0)
+set(USE_SHMEM_SHMGET 0)
+set(USE_SHMEM_MMAP_TMP 0)
+# Platform-specific overrides
+if(havewin32shm)
+  # Windows platform
+  set(USE_SHMEM_WIN32 1)
+  set(USE_SHMEM_WIN32_ANON 1)
+elseif(haveos2shm)
+  # OS/2 platform
+  set(USE_SHMEM_OS2 1)
+  set(USE_SHMEM_OS2_ANON 1)
+elseif(HAVE_BEOS_AREA)
+  # BeOS platform
+  set(USE_SHMEM_BEOS 1)
+  set(USE_SHMEM_BEOS_ANON 1)
+else()
+  # Unix-like platforms - use two-phase selection like configure script
+  # Phase 1: Select one ANON method (highest priority first)
+  if(HAVE_MMAP_ANON)
+    # 4.4BSD-style mmap() via MAP_ANON
+    set(USE_SHMEM_MMAP_ANON 1)
+  elseif(HAVE_MMAP_ZERO)
+    # SVR4-style mmap() on /dev/zero
+    set(USE_SHMEM_MMAP_ZERO 1)
+  elseif(HAVE_SHM_GETANON)
+    # Anonymous System V IPC shmget()
+    set(USE_SHMEM_SHMGET_ANON 1)
+  endif()
+  # Phase 2: Select one non-ANON method (highest priority first)
+  if(HAVE_MMAP_SHM)
+    # mmap() via POSIX.1 shm_open()
+    set(USE_SHMEM_MMAP_SHM 1)
+  elseif(HAVE_MMAP_TMP)
+    # Classical mmap() on temporary file
+    set(USE_SHMEM_MMAP_TMP 1)
+  elseif(HAVE_SHM_GET)
+    # System V IPC shmget()
+    set(USE_SHMEM_SHMGET 1)
+  endif()
+  # Platform-specific overrides
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_VERSION VERSION_LESS "2.4")
+    # Disable ANON mmap on Linux < 2.4
+    set(USE_SHMEM_MMAP_ANON 0)
+  endif()
+  if(CMAKE_SYSTEM_NAME STREQUAL "HP-UX" AND CMAKE_SYSTEM_VERSION MATCHES "^11")
+    # On HP-UX 11, prefer SHMGET_ANON if available
+    if(HAVE_SHM_GETANON)
+      set(USE_SHMEM_MMAP_ANON 0)
+      set(USE_SHMEM_MMAP_ZERO 0)
+      set(USE_SHMEM_SHMGET_ANON 1)
+    endif()
+  endif()
+  if(CMAKE_SYSTEM_NAME STREQUAL "AIX")
+    # On AIX, prefer SHMGET due to lseek() limitations
+    if(HAVE_SHM_GET)
+      set(USE_SHMEM_MMAP_TMP 0)
+      set(USE_SHMEM_MMAP_SHM 0)
+      set(USE_SHMEM_SHMGET 1)
+    endif()
+  endif()
+  # Check if any shared memory method was enabled
+  if(NOT USE_SHMEM_MMAP_ANON AND NOT USE_SHMEM_MMAP_ZERO AND
+     NOT USE_SHMEM_SHMGET_ANON AND NOT USE_SHMEM_MMAP_SHM AND
+     NOT USE_SHMEM_MMAP_TMP AND NOT USE_SHMEM_SHMGET)
+    message(WARNING "No shared memory method could be enabled on this platform")
+  endif()
+endif()
+########################################
 set(_ALL_SOURCE TRUE) #TODO: deteremine
 set(_DARWIN_C_SOURCE TRUE) #TODO: determine
 set(__EXTENSIONS__ TRUE) #TODO: determine (configure does)
@@ -414,7 +621,6 @@ set(__STDC_WANT_MATH_SPEC_FUNCS__ TRUE) #TODO: determine
 set(_TANDEM_SOURCE TRUE) #TODO: determine
 set(_XOPEN_SOURCE FALSE) #TODO: determine
 ########################################
-set(USE_SYSVSEM_SERIALIZE 0) #TODO: determine
 set(WAITIO_USES_POLL 1) #TODO: determine
 # Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
 # significant byte first (like Motorola and SPARC, unlike Intel).
@@ -461,19 +667,42 @@ if(NOT HAVE_UID_T)
 else()
   set(uid_t 0) # cmakedefine
 endif()
-if(NOT HAVE_SOCKLEN_T)
-  set(socklen_t_value int) # used by apr.h.in
-else()
-  set(socklen_t_value socklen_t) # used by apr.h.in
-endif()
-if(NOT HAVE_SIZEOF_INO_T)
-  set(ino_t_value apr_int64_t) # used by apr.h.in #TODO: determine
-else()
-  set(ino_t_value ino_t) # used by apr.h.in
-endif()
 ########################################
 xpcfgDotinFile("include/arch/unix/apr_private.h.in" "apr_private.h")
 ################################################################################
+# used by apr.h.in
+if(NOT HAVE_SOCKLEN_T)
+  set(socklen_t_value int)
+else()
+  set(socklen_t_value socklen_t)
+endif()
+if(NOT HAVE_SIZEOF_INO_T)
+  set(ino_t_value apr_int64_t) #TODO: determine
+else()
+  set(ino_t_value ino_t)
+endif()
+if(SIZEOF_SHORT EQUAL 2)
+  set(short_value short)
+else()
+  set(short_value unknown)
+endif()
+if(SIZEOF_INT EQUAL 4)
+  set(int_value int)
+else()
+  set(int_value unknown)
+endif()
+set(voidp_size ${SIZEOF_VOIDP}) # APR_SIZEOF_VOIDP
+if(HAVE_SIZEOF_INT64_T)
+  set(int64_value int64_t)
+else()
+  set(int64_value unknown)
+endif()
+if(HAVE_SIZEOF_UINT64_T)
+  set(uint64_value uint64_t)
+else()
+  set(uint64_value unknown)
+endif()
+########################################
 xpcfgSet01(arpa_ineth HAVE_ARPA_INET_H) # APR_HAVE_ARPA_INET_H
 xpcfgSet01(conioh HAVE_CONIO_H) # APR_HAVE_CONIO_H
 xpcfgSet01(crypth HAVE_CRYPT_H) # APR_HAVE_CRYPT_H
@@ -516,15 +745,6 @@ xpcfgSet01(unistdh HAVE_UNISTD_H) # APR_HAVE_UNISTD_H
 xpcfgSet01(windowsh HAVE_WINDOWS_H) # APR_HAVE_WINDOWS_H
 xpcfgSet01(winsock2h HAVE_WINSOCK2_H) # APR_HAVE_WINSOCK2_H
 #####
-set(HAVE_MMAP_TMP HAVE_SYS_MMAN_H AND HAVE_MMAP AND HAVE_MUNMAP)
-set(HAVE_MMAP_SHM HAVE_MMAP_TMP AND HAVE_SHM_OPEN AND HAVE_SHM_UNLINK)
-set(HAVE_MMAP_ZERO HAVE_MMAP_TMP AND EXISTS /dev/zero)
-set(HAVE_SHM_HEADERS HAVE_SYS_IPC_H AND HAVE_SYS_SHM_H AND HAVE_SYS_FILE_H)
-set(HAVE_SHM_FUNCS HAVE_SHMGET AND HAVE_SHMAT AND HAVE_SHMDT AND HAVE_SHMCTL)
-set(HAVE_SHM_GETANON HAVE_SHM_HEADERS AND HAVE_SHM_FUNCS)
-set(HAVE_SHM_GET HAVE_SHM_HEADERS AND HAVE_SHM_FUNCS)
-set(HAVE_MMAP_ANON HAVE_MMAP_TMP AND HAVE_MAP_ANON)
-set(HAVE_BEOS_AREA FALSE) # no tests in configure
 xpcfgSet01(havemmaptmp HAVE_MMAP_TMP) # APR_HAVE_SHMEM_MMAP_TMP
 xpcfgSet01(havemmapshm HAVE_MMAP_SHM) # APR_HAVE_SHMEM_MMAP_SHM
 xpcfgSet01(havemmapzero HAVE_MMAP_ZERO) # APR_HAVE_SHMEM_MMAP_ZERO
@@ -548,11 +768,6 @@ xpcfgSet01(fcntlser USE_FCNTL_SERIALIZE) # APR_USE_FCNTL_SERIALIZE
 xpcfgSet01(procpthreadser USE_PROC_PTHREAD_SERIALIZE) # APR_USE_PROC_PTHREAD_SERIALIZE
 xpcfgSet01(pthreadser HAVE_PTHREAD_H) # APR_USE_PTHREAD_SERIALIZE #TODO: maybe more to do to determine?
 #####
-set(HAS_FLOCK_SER HAVE_FLOCK AND HAVE_LOCK_EX)
-set(HAS_SYSV_SER HAVE_SEMGET AND HAVE_SEMCTL AND HAVE_SEM_UNDO)
-set(HAS_POSIX_SER HAVE_SEMAPHORE_H AND HAVE_SEM_CLOSE AND HAVE_SEM_UNLINK AND HAVE_SEM_POST AND HAVE_SEM_WAIT)
-set(HAS_FCNTL_SER HAVE_FCNTL_H AND HAVE_F_SETLK)
-set(HAS_PROC_PTHREAD_SER HAVE_PTHREAD_H AND HAVE_PTHREAD_PROCESS_SHARED AND HAVE_PTHREAD_MUTEXATTR_SETPSHARED AND EXISTS /dev/zero)
 xpcfgSet01(hasflockser HAS_FLOCK_SER) # APR_HAS_FLOCK_SERIALIZE
 xpcfgSet01(hassysvser HAS_SYSV_SER) # APR_HAS_SYSVSEM_SERIALIZE
 xpcfgSet01(hasposixser HAS_POSIX_SER) # APR_HAS_POSIXSEM_SERIALIZE
@@ -561,15 +776,22 @@ xpcfgSet01(hasprocpthreadser HAS_PROC_PTHREAD_SER) # APR_HAS_PROC_PTHREAD_SERIAL
 #####
 xpcfgSet01(proclockglobal FALSE) # APR_PROCESS_LOCK_IS_GLOBAL #TODO: determine
 #####
-xpcfgSet01(have_corkable_tcp HAVE_TCP_CORK) # APR_HAVE_CORKABLE_TCP
+if(HAVE_TCP_CORK OR HAVE_TCP_NOPUSH) # Define if TCP_NOPUSH or TCP_CORK is supported
+  set(have_corkable_tcp 1) # APR_HAVE_CORKABLE_TCP
+else()
+  set(have_corkable_tcp 0) # APR_HAVE_CORKABLE_TCP
+endif()
 xpcfgSet01(have_getrlimit HAVE_GETRLIMIT) # APR_HAVE_GETRLIMIT
 xpcfgSet01(have_in_addr HAVE_IN_ADDR) # APR_HAVE_IN_ADDR
 xpcfgInetAddr(HAVE_INET_ADDR)
 xpcfgSet01(have_inet_addr HAVE_INET_ADDR) # APR_HAVE_INET_ADDR
 xpcfgInetNetwork(HAVE_INET_NETWORK)
 xpcfgSet01(have_inet_network HAVE_INET_NETWORK) # APR_HAVE_INET_NETWORK
-set(HAVE_IPV6 HAVE_SOCKADDR_IN6 AND HAVE_GETADDRINFO AND HAVE_GETNAMEINFO AND HAVE_GAI_ADDRCONFIG)
-xpcfgSet01(have_ipv6 HAVE_IPV6) # APR_HAVE_IPV6
+if(HAVE_SOCKADDR_IN6 AND HAVE_GETADDRINFO AND HAVE_GETNAMEINFO AND HAVE_GAI_ADDRCONFIG)
+  set(have_ipv6 1) # APR_HAVE_IPV6
+else()
+  set(have_ipv6 0) # APR_HAVE_IPV6
+endif()
 xpcfgSet01(have_sockaddr_un TRUE) # APR_HAVE_SOCKADDR_UN # TODO: determine
 xpcfgSet01(have_memmove HAVE_MEMMOVE) # APR_HAVE_MEMMOVE
 xpcfgSet01(have_setrlimit HAVE_SETRLIMIT) # APR_HAVE_SETRLIMIT
@@ -591,8 +813,8 @@ xpcfgSctp(HAVE_SCTP)
 xpcfgSet01(have_sctp HAVE_SCTP) # APR_HAVE_SCTP
 xpcfgSet01(have_iovec HAVE_SIZEOF_STRUCT_IOVEC) # APR_HAVE_IOVEC
 #####
-set(HAVE_SHAREDMEM USE_SHMEM_MMAP_TMP OR USE_SHMEM_MMAP_SHM OR USE_SHMEM_MMAP_ZERO OR USE_SHMEM_SHMGET OR
-  USE_SHMEM_MMAP_ANON OR USE_SHMEM_BEOS OR USE_SHMEM_OS2 OR USE_SHMEM_WIN32)
+set(HAVE_SHAREDMEM (USE_SHMEM_MMAP_TMP OR USE_SHMEM_MMAP_SHM OR USE_SHMEM_MMAP_ZERO OR USE_SHMEM_SHMGET OR
+  USE_SHMEM_MMAP_ANON OR USE_SHMEM_BEOS OR USE_SHMEM_OS2 OR USE_SHMEM_WIN32))
 xpcfgSet01(sharedmem HAVE_SHAREDMEM) # APR_HAS_SHARED_MEMORY
 xpcfgSet01(threads TRUE) # APR_HAS_THREADS #TODO: determine
 xpcfgSet01(sendfile TRUE) # APR_HAS_SENDFILE #TODO: determine
@@ -616,126 +838,46 @@ xpcfgSet01(apr_has_timedlocks TRUE) # APR_HAS_TIMEDLOCKS #TODO: determine
 xpcfgSet01(apr_procattr_user_set_requires_password FALSE) # APR_PROCATTR_USER_SET_REQUIRES_PASSWORD #TODO: determine
 xpcfgSet01(file_as_socket TRUE) # APR_FILES_AS_SOCKETS #TODO: determine
 xpcfgSet01(apr_charset_ebcdic FALSE) # APR_CHARSET_EBCDIC #TODO: determine
-set(apr_tcp_nopush_flag TCP_CORK) # APR_TCP_NOPUSH_FLAG #TODO: determine
+xpcfgDetermineTcpNopushFlag(apr_tcp_nopush_flag) # APR_TCP_NOPUSH_FLAG (TCP_NOPUSH or TCP_CORK)
 xpcfgSet01(tcp_nodelay_inherited TRUE) # APR_TCP_NODELAY_INHERITED #TODO: determine
-xpcfgSet01(o_nonblock_inherited FALSE) # APR_O_NONBLOCK_INHERITED #TODO: determine
-#####
-if(SIZEOF_SHORT EQUAL 2)
-  set(short_value short)
-else()
-  set(short_value unknown)
-endif()
-if(SIZEOF_INT EQUAL 4)
-  set(int_value int)
-else()
-  set(int_value unknown)
-endif()
-set(voidp_size ${SIZEOF_VOIDP}) # APR_SIZEOF_VOIDP
-if(HAVE_SIZEOF_INT64_T)
-  set(int64_value int64_t)
-else()
-  set(int64_value unknown)
-endif()
-if(HAVE_SIZEOF_UINT64_T)
-  set(uint64_value uint64_t)
-else()
-  set(uint64_value unknown)
-endif()
-if(SIZEOF_INT EQUAL 8)
-  set(int64_literal "#define APR_INT64_C(val) (val)")
-  set(uint64_literal "#define APR_UINT64_C(val) (val##U)")
-  set(int64_t_fmt "#define APR_INT64_T_FMT \"d\"")
-  set(uint64_t_fmt "#define APR_UINT64_T_FMT \"u\"")
-  set(uint64_t_hex_fmt "#define APR_UINT64_T_HEX_FMT \"x\"")
-  set(long_value int)
-elseif(SIZEOF_LONG EQUAL 8)
-  set(int64_literal "#define APR_INT64_C(val) (val##L)")
-  set(uint64_literal "#define APR_UINT64_C(val) (val##UL)")
-  set(int64_t_fmt "#define APR_INT64_T_FMT \"ld\"")
-  set(uint64_t_fmt "#define APR_UINT64_T_FMT \"lu\"")
-  set(uint64_t_hex_fmt "#define APR_UINT64_T_HEX_FMT \"lx\"")
-  set(int64_t_fmt "#define APR_INT64_T_FMT PRId64")
-  set(uint64_t_fmt "#define APR_UINT64_T_FMT PRIu64")
-  set(uint64_t_hex_fmt "#define APR_UINT64_T_HEX_FMT PRIx64")
-  set(long_value long)
-elseif(SIZEOF_LONG_LONG EQUAL 8)
-  set(int64_literal "#define APR_INT64_C(val) (val##LL)")
-  set(uint64_literal "#define APR_UINT64_C(val) (val##ULL)")
-  # Linux, Solaris, FreeBSD all support ll with printf.
-  # BSD 4.4 originated 'q'. Solaris is more popular and
-  # doesn't support 'q'. Solaris wins. Exceptions can
-  # go to the OS-dependent section.
-  set(int64_t_fmt "#define APR_INT64_T_FMT \"lld\"")
-  set(uint64_t_fmt "#define APR_UINT64_T_FMT \"llu\"")
-  set(uint64_t_hex_fmt "#define APR_UINT64_T_HEX_FMT \"llx\"")
-  set(long_value "long long")
-elseif(SIZEOF_LONG_LONG EQUAL 8)
-  set(int64_literal "#define APR_INT64_C(val) (val##LL)")
-  set(uint64_literal "#define APR_UINT64_C(val) (val##ULL)")
-  set(int64_t_fmt "#define APR_INT64_T_FMT \"qd\"")
-  set(uint64_t_fmt "#define APR_UINT64_T_FMT \"qu\"")
-  set(uint64_t_hex_fmt "#define APR_UINT64_T_HEX_FMT \"qx\"")
-  set(long_value "__int64")
-else()
-  message(FATAL_ERROR "could not detect a 64-bit integer type")
-endif()
-xpcfgInt64C(HAVE_INT64_C_DEFINED)
-if(HAVE_INT64_C_DEFINED)
-  set(int64_literal "#define APR_INT64_C(val) INT64_C(val)")
-  set(uint64_literal "#define APR_UINT64_C(val) UINT64_C(val)")
-endif()
-#####
+xpcfgONonblockInherited(O_NONBLOCK_IS_INHERITED)
+xpcfgSet01(o_nonblock_inherited O_NONBLOCK_IS_INHERITED) # APR_O_NONBLOCK_INHERITED
+########################################
+# Set up and process 64-bit integer literals and format specifiers
+set(int64_literal "#define APR_INT64_C(val) @INT64_C@")
+set(uint64_literal "#define APR_UINT64_C(val) @UINT64_C@")
+xpcfgInt64Literal(int64_literal uint64_literal)
+set(int64_t_fmt "#define APR_INT64_T_FMT @INT64_T_FMT@")
+set(uint64_t_fmt "#define APR_UINT64_T_FMT @UINT64_T_FMT@")
+set(uint64_t_hex_fmt "#define APR_UINT64_T_HEX_FMT @UINT64_T_HEX_FMT@")
+set(long_value "@LONG_VALUE@")
+xpcfgInt64Format(int64_t_fmt uint64_t_fmt uint64_t_hex_fmt long_value)
+# Set up and process size type format specifiers
+set(ssize_t_fmt "#define APR_SSIZE_T_FMT @SSIZE_T_FMT@")
+set(size_t_fmt "#define APR_SIZE_T_FMT @SIZE_T_FMT@")
+xpcfgSizeTypeFormat(ssize_t_fmt size_t_fmt)
+# Set up and process off_t format specifier
+set(off_t_fmt "#define APR_OFF_T_FMT @OFF_T_FMT@")
+xpcfgOffFormat(off_t_fmt INT64_T_FMT "APR_INT64_T_FMT")
+# Set up and process pid_t format specifier
+set(pid_t_fmt "#define APR_PID_T_FMT @PID_T_FMT@")
+xpcfgPidFormat(pid_t_fmt INT64_T_FMT "APR_INT64_T_FMT")
+########################################
 xpcfgSet01(bigendian WORDS_BIGENDIAN) # APR_IS_BIGENDIAN
-#####
 set(apr_thread_func) # APR_THREAD_FUNC # TODO: handle case where it should be set to __stdcall
-###
-if(${CMAKE_SYSTEM_NAME} STREQUAL SOME_PLATFORM) # TODO: handle other cases
-  # where SOME_PLATFORM matches results from CMakeDetermineSystem.cmake:
-  # AIX BSD/OS FreeBSD HP-UX IRIX Linux GNU/kFreeBSD NetBSD OpenBSD OSF1
-  # SCO_SV UnixWare UNIX_SV Xenix SunOS Tru64 ULTRIX CYGWIN_NT-5.1 Darwin
-else()
-  set(ssize_t_fmt "#define APR_SSIZE_T_FMT \"ld\"")
-  set(size_t_fmt "#define APR_SIZE_T_FMT \"lu\"")
-endif()
-if(HAVE_SIZEOF_OFF_T)
-  if(SIZEOF_OFF_T EQUAL SIZEOF_LONG)
-    set(off_t_fmt "#define APR_OFF_T_FMT \"ld\"")
-  elseif(SIZEOF_OFF_T EQUAL SIZEOF_INT)
-    set(off_t_fmt "#define APR_OFF_T_FMT \"d\"")
-  elseif(SIZEOF_OFF_T EQUAL SIZEOF_LONG_LONG)
-    set(off_t_fmt "#define APR_OFF_T_FMT APR_INT64_T_FMT")
-  else()
-    message(FATAL_ERROR "could not determine the size of off_t")
-  endif()
-else()
-  message(FATAL_ERROR "could not determine APR_OFF_T_FMT")
-endif()
-if(HAVE_SIZEOF_PID_T)
-  if(SIZEOF_PID_T EQUAL SIZEOF_SHORT)
-    set(pid_t_fmt "#define APR_PID_T_FMT \"hd\"")
-  elseif(SIZEOF_PID_T EQUAL SIZEOF_INT)
-    set(pid_t_fmt "#define APR_PID_T_FMT \"d\"")
-  elseif(SIZEOF_PID_T EQUAL SIZEOF_LONG)
-    set(pid_t_fmt "#define APR_PID_T_FMT \"ld\"")
-  elseif(SIZEOF_PID_T EQUAL SIZEOF_LONG_LONG)
-    set(pid_t_fmt "#define APR_PID_T_FMT APR_INT64_T_FMT")
-  else()
-    message(FATAL_ERROR "could not determine the proper size for pid_t")
-  endif()
-else()
-  message(FATAL_ERROR "could not determine APR_PID_T_FMT")
-endif()
-#####
 xpcfgSet01(proc_mutex_is_global FALSE) # APR_PROC_MUTEX_IS_GLOBAL #TODO: determine
 if(MINGW OR OS2) #TODO: verify OS2 is a cmake variable
   set(eolstr \\r\\n)
   #set(shlibpath_var) #TODO: handle cases where it isn't LD_LIBRARY_PATH
+elseif(APPLE)
+  set(eolstr \\n) # APR_EOL_STR
+  set(shlibpath_var DYLD_LIBRARY_PATH) # APR_DSOPATH
 else()
   set(eolstr \\n) # APR_EOL_STR
   set(shlibpath_var LD_LIBRARY_PATH) # APR_DSOPATH
 endif()
 configure_file(${CMAKE_SOURCE_DIR}/include/apr.h.in apr.h)
-##########
+################################################################################
 set(CMAKE_REQUIRED_LIBRARIES)
 set(CMAKE_REQUIRED_DEFINITIONS)
 list(APPEND APR_SYSTEM_LIBS ${XP_SYSTEM_LIBS})
