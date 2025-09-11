@@ -23,7 +23,7 @@
 #include "apr_poll.h"
 
 #if defined(__linux__)
-#include "arch/unix/apr_private.h"
+#include "apr_private.h"
 #endif
 #ifndef HAVE_EPOLL_WAIT_RELIABLE_TIMEOUT
 #define HAVE_EPOLL_WAIT_RELIABLE_TIMEOUT 0
