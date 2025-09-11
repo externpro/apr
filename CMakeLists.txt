@@ -537,6 +537,8 @@ IF(APR_BUILD_TESTAPR)
   GET_PROPERTY(link_flags TARGET mod_test PROPERTY LINK_FLAGS)
   SET(link_flags "${link_flags} /export:count_reps")
   SET_TARGET_PROPERTIES(mod_test PROPERTIES LINK_FLAGS ${link_flags})
+  else()
+    add_compile_definitions(CMAKE_TEST="$<TARGET_FILE:mod_test>") # for testdso
   endif()
 
   # Build all the single-source executable files with no special build
@@ -557,6 +559,9 @@ IF(APR_BUILD_TESTAPR)
     test/tryread.c
     test/internal/testucs.c
   )
+  if(NOT WIN32)
+    list(REMOVE_ITEM single_source_programs test/internal/testucs.c)
+  endif()
 
   FOREACH(sourcefile ${single_source_programs})
     STRING(REGEX REPLACE ".*/([^\\]+)\\.c" "\\1" proggie ${sourcefile})
@@ -572,6 +577,9 @@ IF(APR_BUILD_TESTAPR)
     testmutexscope
     testucs
   )
+  if(NOT WIN32)
+    list(REMOVE_ITEM simple_tests testucs)
+  endif()
 
   FOREACH(simple ${simple_tests})
     ADD_TEST(NAME ${simple} COMMAND ${simple})
