@@ -29,15 +29,15 @@
 
 #if APR_HAS_DSO
 
-#ifdef NETWARE
+#if defined(CMAKE_TEST)
+# define MOD_NAME CMAKE_TEST
+# define LIB_NAME CMAKE_TEST
+#elif defined(NETWARE)
 # define MOD_NAME "mod_test.nlm"
 #elif defined(BEOS) || defined(__MVS__)
 # define MOD_NAME "mod_test.so"
 #elif defined(WIN32)
 # define MOD_NAME TESTBINPATH "mod_test.dll"
-#elif defined(CMAKE_TEST)
-# define MOD_NAME CMAKE_TEST
-# define LIB_NAME CMAKE_TEST
 #elif defined(DARWIN)
 # define MOD_NAME ".libs/mod_test.so" 
 # define LIB_NAME ".libs/libmod_test.dylib" 

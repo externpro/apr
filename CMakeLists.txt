@@ -537,9 +537,8 @@ IF(APR_BUILD_TESTAPR)
   GET_PROPERTY(link_flags TARGET mod_test PROPERTY LINK_FLAGS)
   SET(link_flags "${link_flags} /export:count_reps")
   SET_TARGET_PROPERTIES(mod_test PROPERTIES LINK_FLAGS ${link_flags})
-  else()
-    add_compile_definitions(CMAKE_TEST="$<TARGET_FILE:mod_test>") # for testdso
   endif()
+  add_compile_definitions(CMAKE_TEST="$<TARGET_FILE:mod_test>") # for testdso
 
   # Build all the single-source executable files with no special build
   # requirements.
