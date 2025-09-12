@@ -1,9 +1,6 @@
 name: Linux
 
 on:
-  push:
-    branches: [ "*" ]
-    tags: [ "*" ]
   pull_request:
     branches: [ "trunk", "1.7.x" ]
 

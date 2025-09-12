@@ -1,0 +1,16 @@
+{
+  "version": 8,
+  "configurePresets": [
+    {
+      "name": "config-base",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/_bld-${presetName}",
+      "cacheVariables": {
+        "APR_BUILD_TESTAPR": "ON",
+        "APR_BUILD_SHARED": "OFF",
+        "TEST_STATIC_LIBS": "ON",
+        "XP_NAMESPACE": "xpro"
+      }
+    }
+  ]
+}

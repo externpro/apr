@@ -29,7 +29,10 @@
 
 #if APR_HAS_DSO
 
-#ifdef NETWARE
+#if defined(CMAKE_TEST)
+# define MOD_NAME CMAKE_TEST
+# define LIB_NAME CMAKE_TEST
+#elif defined(NETWARE)
 # define MOD_NAME "mod_test.nlm"
 #elif defined(BEOS) || defined(__MVS__)
 # define MOD_NAME "mod_test.so"

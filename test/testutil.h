@@ -25,14 +25,17 @@
  * and part of apr, itself
  */
 
-#ifdef WIN32
 #ifdef BINPATH
 #define TESTBINPATH APR_STRINGIFY(BINPATH) "/"
-#else
+#endif
+#ifdef WIN32
+#ifndef BINPATH
 #define TESTBINPATH ""
 #endif
 #else
+#ifndef BINPATH
 #define TESTBINPATH "./"
+#endif
 #endif
 
 #ifdef WIN32
