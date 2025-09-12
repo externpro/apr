@@ -104,7 +104,7 @@ static void test_addr_copy(abts_case *tc, void *data)
     int rc;
     const char *hosts[] = {
         "127.0.0.1",
-#if APR_HAVE_IPV6
+#if APR_HAVE_IPV6_TEST
         "::1",
 #endif
         NULL
