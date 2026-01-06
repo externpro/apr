@@ -39,8 +39,6 @@ ENDIF()
 SET(apr_name    apr-1)
 SET(apr_libname libapr-1)
 
-include(GNUInstallDirs)
-include(xpflags)
 OPTION(APR_INSTALL_PRIVATE_H  "Install selected private .h files (for httpd)"  OFF)
 OPTION(APR_HAVE_IPV6        "IPv6 support"                 ON)
 OPTION(INSTALL_PDB          "Install .pdb files (if generated)"  ON)
