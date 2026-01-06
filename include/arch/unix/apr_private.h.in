@@ -566,6 +566,9 @@
 /* Define to 1 if you have the 'stricmp' function. */
 #undef HAVE_STRICMP
 
+/* Define to 1 if you have the 'strsignal' function. */
+#undef HAVE_STRSIGNAL
+
 /* Define to 1 if you have the <strings.h> header file. */
 #undef HAVE_STRINGS_H
 
