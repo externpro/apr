@@ -81,6 +81,7 @@ ELSEIF(${MIN_WINDOWS_VER} STREQUAL "Windows7")
 ELSE()
   SET(win32_winnt_str ${MIN_WINDOWS_VER})
 ENDIF()
+endif()
 
 # Read current version.
 FILE(STRINGS include/apr_version.h VERSION_STRINGS REGEX "#define (APR_MAJOR_VERSION|APR_MINOR_VERSION|APR_PATCH_VERSION)")
@@ -89,6 +90,7 @@ STRING(REGEX REPLACE ".*#define APR_MAJOR_VERSION[ \t]+([0-9]+).*" "\\1" APR_MAJ
 STRING(REGEX REPLACE ".*#define APR_MINOR_VERSION[ \t]+([0-9]+).*" "\\1" APR_MINOR_VERSION ${VERSION_STRINGS})
 STRING(REGEX REPLACE ".*#define APR_PATCH_VERSION[ \t]+([0-9]+).*" "\\1" APR_PATCH_VERSION ${VERSION_STRINGS})
 
+if(WIN32)
 CONFIGURE_FILE(include/apr.hwc
                ${PROJECT_BINARY_DIR}/apr.h)
 else()
