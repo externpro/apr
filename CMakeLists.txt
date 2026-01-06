@@ -39,8 +39,6 @@ ENDIF()
 SET(apr_name    apr-1)
 SET(apr_libname libapr-1)
 
-include(GNUInstallDirs)
-include(xpflags)
 OPTION(APR_INSTALL_PRIVATE_H  "Install selected private .h files (for httpd)"  OFF)
 OPTION(APR_HAVE_IPV6        "IPv6 support"                 ON)
 OPTION(INSTALL_PDB          "Install .pdb files (if generated)"  ON)
@@ -83,6 +81,7 @@ ELSEIF(${MIN_WINDOWS_VER} STREQUAL "Windows7")
 ELSE()
   SET(win32_winnt_str ${MIN_WINDOWS_VER})
 ENDIF()
+endif()
 
 # Read current version.
 FILE(STRINGS include/apr_version.h VERSION_STRINGS REGEX "#define (APR_MAJOR_VERSION|APR_MINOR_VERSION|APR_PATCH_VERSION)")
@@ -91,6 +90,7 @@ STRING(REGEX REPLACE ".*#define APR_MAJOR_VERSION[ \t]+([0-9]+).*" "\\1" APR_MAJ
 STRING(REGEX REPLACE ".*#define APR_MINOR_VERSION[ \t]+([0-9]+).*" "\\1" APR_MINOR_VERSION ${VERSION_STRINGS})
 STRING(REGEX REPLACE ".*#define APR_PATCH_VERSION[ \t]+([0-9]+).*" "\\1" APR_PATCH_VERSION ${VERSION_STRINGS})
 
+if(WIN32)
 CONFIGURE_FILE(include/apr.hwc
                ${PROJECT_BINARY_DIR}/apr.h)
 else()
@@ -606,26 +606,21 @@ write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/${project_name_low
   COMPATIBILITY SameMajorVersion
 )
 
-function(callPackageDevel)
-  set(XP_INSTALL_CMAKEDIR ${APR_CMAKEDIR})
-  list(TRANSFORM install_targets PREPEND ${APR_NAMESPACE})
-  string(JOIN "\n" EXT1
-    "set(THREAD_PREFER_PTHREAD_FLAG ON)"
-    "find_package(Threads REQUIRED) # depends on Threads::Threads"
-    ""
-    )
-  set(CMAKE_PROJECT_NAME ${project_name_lower})
-  xpPackageDevel(TARGETS_FILE ${APR_CONFIG} LIBRARIES ${install_targets})
-endfunction()
-
 set(APR_CONFIG ${project_name_lower}-config)
 if(DEFINED XP_NAMESPACE)
+  xpExternPackage(REPO_NAME ${project_name_lower}
+    NAMESPACE ${XP_NAMESPACE} ALIAS_NAMESPACE ${project_name_lower}
+    TARGETS_FILE ${APR_CONFIG} LIBRARIES ${install_targets}
+    BASE ${APR_MAJOR_VERSION}.${APR_MINOR_VERSION}.${APR_PATCH_VERSION}
+    XPDIFF "patch(msw), auto(unix)" FIND_THREADS
+    WEB "http://apr.apache.org/" UPSTREAM "github.com/apache/apr"
+    DESC "Apache Portable Runtime project"
+    LICENSE "[Apache-2.0](http://www.apache.org/licenses/LICENSE-2.0.html 'Apache License, Version 2.0')"
+    )
   set(APR_NAMESPACE ${XP_NAMESPACE}::)
-  set(APR_CMAKEDIR "${CMAKE_INSTALL_DATADIR}/cmake")
-  callPackageDevel()
-  set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME devel)
+  set(APR_CMAKEDIR "${XP_INSTALL_CMAKEDIR}")
 else()
-  set(APR_NAMESPACE apr::)
+  set(APR_NAMESPACE ${project_name_lower}::)
   set(APR_CMAKEDIR "${APR_INSTALL_LIB_DIR}/cmake/${project_name_lower}")
 endif()
 

@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+#if defined(__linux__) && !defined(_GNU_SOURCE)
+#define _GNU_SOURCE
+#endif
+
 #include "apr_arch_networkio.h"
 #include "apr_network_io.h"
 #include "apr_strings.h"

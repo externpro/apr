@@ -22,6 +22,7 @@
 #include "apr_strings.h"
 
 #include <assert.h>
+#include <string.h>
 #if APR_HAS_THREADS && APR_HAVE_PTHREAD_H
 #include <pthread.h>
 #endif
@@ -116,7 +117,17 @@ void apr_signal_init(apr_pool_t *pglobal)
 }
 const char *apr_signal_description_get(int signum)
 {
+#if defined(HAVE_STRSIGNAL) && HAVE_STRSIGNAL
+    if (signum >= 0) {
+        const char *desc = strsignal(signum);
+        if (desc) {
+            return desc;
+        }
+    }
+    return "unknown signal (number)";
+#else
     return (signum >= 0) ? sys_siglist[signum] : "unknown signal (number)";
+#endif
 }
 
 #else /* !(SYS_SIGLIST_DECLARED || HAVE_DECL_SYS_SIGLIST) */

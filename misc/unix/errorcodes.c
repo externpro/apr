@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+#if defined(__linux__) && !defined(_GNU_SOURCE)
+#define _GNU_SOURCE
+#endif
+
 #include "apr_arch_misc.h"
 #include "apr_strings.h"
 #include "apr_lib.h"
