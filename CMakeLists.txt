@@ -618,7 +618,7 @@ if(DEFINED XP_NAMESPACE)
     LICENSE "[Apache-2.0](http://www.apache.org/licenses/LICENSE-2.0.html 'Apache License, Version 2.0')"
     )
   set(APR_NAMESPACE ${XP_NAMESPACE}::)
-  set(APR_CMAKEDIR "${XP_INSTALL_CMAKEDIR}")
+  set(APR_CMAKEDIR "${CMAKE_INSTALL_CMAKEDIR}")
 else()
   set(APR_NAMESPACE ${project_name_lower}::)
   set(APR_CMAKEDIR "${APR_INSTALL_LIB_DIR}/cmake/${project_name_lower}")
