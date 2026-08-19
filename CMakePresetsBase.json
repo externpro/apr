@@ -9,7 +9,7 @@
         "APR_BUILD_TESTAPR": "ON",
         "APR_BUILD_SHARED": "OFF",
         "TEST_STATIC_LIBS": "ON",
-        "XP_NAMESPACE": "xpro"
+        "CMAKE_EXPERIMENTAL_GENERATE_SBOM": "ca494ed3-b261-4205-a01f-603c95e4cae0"
       }
     }
   ],
