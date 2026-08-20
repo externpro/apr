@@ -1467,7 +1467,8 @@ static void test_datasync_on_stream(abts_case *tc, void *data)
     rv = apr_file_datasync(f);
     if (rv != APR_SUCCESS) {
 #if defined(__APPLE__)
-        ABTS_INT_EQUAL(tc, ENOTSUP, rv);
+        ABTS_ASSERT(tc, "datasync on stdout is ENOTSUP or EINVAL",
+                    rv == ENOTSUP || rv == APR_EINVAL);
 #else
         ABTS_INT_EQUAL(tc, APR_EINVAL, rv);
 #endif

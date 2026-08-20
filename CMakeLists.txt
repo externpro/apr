@@ -17,9 +17,8 @@
 
 # CMAKE_MINIMUM_REQUIRED should be the first directive in the file:
 # https://cmake.org/cmake/help/latest/command/cmake_minimum_required.html
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8...3.31)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8...4.3)
 
-set(CMAKE_PROJECT_TOP_LEVEL_INCLUDES .devcontainer/cmake/xproinc.cmake)
 PROJECT(APR C)
 
 # Enable support for MSVC runtime library selection by abstraction
@@ -607,20 +606,17 @@ write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/${project_name_low
 )
 
 set(APR_CONFIG ${project_name_lower}-config)
-if(DEFINED XP_NAMESPACE)
-  xpExternPackage(REPO_NAME ${project_name_lower}
-    NAMESPACE ${XP_NAMESPACE} ALIAS_NAMESPACE ${project_name_lower}
-    TARGETS_FILE ${APR_CONFIG} LIBRARIES ${install_targets}
+if(COMMAND xpExternPackage)
+  xpExternPackage(REPO_NAME ${project_name_lower} TARGETS_FILE ${APR_CONFIG}
+    LIBRARIES ${install_targets} DEFAULT_TARGETS ${install_targets}
     BASE ${APR_MAJOR_VERSION}.${APR_MINOR_VERSION}.${APR_PATCH_VERSION}
-    XPDIFF "patch(msw), auto(unix)" FIND_THREADS
+    XPDIFF "patch[msw], auto[unix]"
     WEB "http://apr.apache.org/" UPSTREAM "github.com/apache/apr"
     DESC "Apache Portable Runtime project"
     LICENSE "[Apache-2.0](http://www.apache.org/licenses/LICENSE-2.0.html 'Apache License, Version 2.0')"
     )
-  set(APR_NAMESPACE ${XP_NAMESPACE}::)
   set(APR_CMAKEDIR "${CMAKE_INSTALL_CMAKEDIR}")
 else()
-  set(APR_NAMESPACE ${project_name_lower}::)
   set(APR_CMAKEDIR "${APR_INSTALL_LIB_DIR}/cmake/${project_name_lower}")
 endif()
 
@@ -631,7 +627,7 @@ INSTALL(TARGETS ${install_targets} EXPORT ${APR_CONFIG}
 )
 
 INSTALL(EXPORT ${APR_CONFIG}
-        NAMESPACE ${APR_NAMESPACE}
+        NAMESPACE ${project_name_lower}::
         DESTINATION "${APR_CMAKEDIR}"
         FILE "${APR_CONFIG}.cmake"
 )

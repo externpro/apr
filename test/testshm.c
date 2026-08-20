@@ -226,6 +226,15 @@ static void test_named_remove(abts_case *tc, void *data)
      */
     if (rv == APR_SUCCESS)
     {
+#if defined(_WIN32)
+      /* The file mapping object is held open by shm; close it
+       * before creating another with the same name. */
+      rv = apr_shm_destroy(shm);
+      APR_ASSERT_SUCCESS(tc, "Error destroying shared memory block", rv);
+      if (rv != APR_SUCCESS) {
+          return;
+      }
+#endif
       rv = apr_shm_create(&shm2, SHARED_SIZE, SHARED_FILENAME, p);
       APR_ASSERT_SUCCESS(tc, "Error allocating shared memory block", rv);
       if (rv != APR_SUCCESS) {
