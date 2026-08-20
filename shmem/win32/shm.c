@@ -55,7 +55,7 @@ static apr_status_t shm_cleanup(void* shm)
     if (m->filename) {
         /* Remove file if file backed */
         apr_status_t rc = apr_file_remove(m->filename, m->pool);
-        if (rc != APR_SUCCESS && rc != APR_ENOENT && rv == APR_SUCCESS) {
+        if (rc != APR_SUCCESS && !APR_STATUS_IS_ENOENT(rc) && rv == APR_SUCCESS) {
             rv = rc;
         }
     }
