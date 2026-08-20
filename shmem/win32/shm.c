@@ -42,17 +42,26 @@ static apr_status_t shm_cleanup(void* shm)
     apr_status_t rv = APR_SUCCESS;
     apr_shm_t *m = shm;
     
-    if (!UnmapViewOfFile(m->memblk)) {
-        rv = apr_get_os_error();
+    if (m->memblk) {
+        if (!UnmapViewOfFile(m->memblk)) {
+            rv = apr_get_os_error();
+        }
     }
-    if (!CloseHandle(m->hMap)) {
-        rv = rv != APR_SUCCESS ? rv : apr_get_os_error();
+    if (m->hMap) {
+        if (!CloseHandle(m->hMap)) {
+            rv = rv != APR_SUCCESS ? rv : apr_get_os_error();
+        }
     }
     if (m->filename) {
         /* Remove file if file backed */
         apr_status_t rc = apr_file_remove(m->filename, m->pool);
-        rv = rv != APR_SUCCESS ? rv : rc;
+        if (rc != APR_SUCCESS && rc != APR_ENOENT && rv == APR_SUCCESS) {
+            rv = rc;
+        }
     }
+    m->memblk = NULL;
+    m->hMap = NULL;
+    m->filename = NULL;
     return rv;
 }
 
@@ -264,7 +273,9 @@ APR_DECLARE(apr_status_t) apr_shm_remove(const char *filename,
 APR_DECLARE(apr_status_t) apr_shm_delete(apr_shm_t *m)
 {
     if (m->filename) {
-        return apr_shm_remove(m->filename, m->pool);
+        apr_status_t rv = shm_cleanup(m);
+        apr_pool_cleanup_kill(m->pool, m, shm_cleanup);
+        return rv;
     }
     else {
         return APR_ENOTIMPL;
