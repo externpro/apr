@@ -605,9 +605,9 @@ write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/${project_name_low
   COMPATIBILITY SameMajorVersion
 )
 
-set(APR_CONFIG ${project_name_lower}-config)
+set(targetsFile ${project_name_lower}-targets)
 if(COMMAND xpExternPackage)
-  xpExternPackage(REPO_NAME ${project_name_lower} TARGETS_FILE ${APR_CONFIG}
+  xpExternPackage(REPO_NAME ${project_name_lower} TARGETS_FILE ${targetsFile}
     LIBRARIES ${install_targets} DEFAULT_TARGETS ${install_targets}
     BASE ${APR_MAJOR_VERSION}.${APR_MINOR_VERSION}.${APR_PATCH_VERSION}
     XPDIFF "patch[msw], auto[unix]"
@@ -615,25 +615,24 @@ if(COMMAND xpExternPackage)
     DESC "Apache Portable Runtime project"
     LICENSE "[Apache-2.0](http://www.apache.org/licenses/LICENSE-2.0.html 'Apache License, Version 2.0')"
     )
-  set(APR_CMAKEDIR "${CMAKE_INSTALL_CMAKEDIR}")
-else()
-  set(APR_CMAKEDIR "${APR_INSTALL_LIB_DIR}/cmake/${project_name_lower}")
+elseif(NOT DEFINED CMAKE_INSTALL_CMAKEDIR)
+  set(CMAKE_INSTALL_CMAKEDIR "${APR_INSTALL_LIB_DIR}/cmake/${project_name_lower}")
 endif()
 
-INSTALL(TARGETS ${install_targets} EXPORT ${APR_CONFIG}
+INSTALL(TARGETS ${install_targets} EXPORT ${targetsFile}
         RUNTIME DESTINATION ${APR_INSTALL_BIN_DIR}
         LIBRARY DESTINATION ${APR_INSTALL_LIB_DIR}
         ARCHIVE DESTINATION ${APR_INSTALL_LIB_DIR}
 )
 
-INSTALL(EXPORT ${APR_CONFIG}
+INSTALL(EXPORT ${targetsFile}
         NAMESPACE ${project_name_lower}::
-        DESTINATION "${APR_CMAKEDIR}"
-        FILE "${APR_CONFIG}.cmake"
+        DESTINATION "${CMAKE_INSTALL_CMAKEDIR}"
+        FILE "${targetsFile}.cmake"
 )
 
 INSTALL(FILES "${CMAKE_CURRENT_BINARY_DIR}/${project_name_lower}-config-version.cmake"
-        DESTINATION "${APR_CMAKEDIR}"
+        DESTINATION "${CMAKE_INSTALL_CMAKEDIR}"
 )
 
 IF(INSTALL_PDB)

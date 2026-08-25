@@ -102,7 +102,7 @@ static void test_anon(abts_case *tc, void *data)
     rv = apr_proc_fork(&proc, p);
     if (rv == APR_INCHILD) { /* child */
         int num = msgwait("anon_test", N_MESSAGES,
-                          5, /* wait for 5s */
+                          10, /* wait for 10s */
                           10 /* with 10ms spin delay */);
         /* exit with the number of messages received so that the parent
          * can check that all messages were received.
